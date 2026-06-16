@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.flag
+~$*
+.DS_Store
+.vscode/
+stp_*.html
+stp_*.png
+stp_headers.txt
+

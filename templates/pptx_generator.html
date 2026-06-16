@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>PPTX Generator</title>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+</head>
+<body style="background:#0a0e27;color:#00bbf9;font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;">
+<h1>正在生成 智鉴药靶 路演PPT...</h1>
+<div id="status" style="color:#b0c4de;margin-top:20px;"></div>
+<script>
+function status(msg) { document.getElementById('status').textContent = msg; }
+
+async function generate() {
+    status('正在初始化...');
+    const pptx = new PptxGenJS();
+    pptx.defineLayout({ name: 'WIDE', width: 13.333, height: 7.5 });
+    pptx.layout = 'WIDE';
+
+    const BG = '0A0E27';
+    const CARD = '141E38';
+    const BLUE = '00BBF9';
+    const GREEN = '00E676';
+    const PURPLE = '7B2FFF';
+    const ORANGE = 'FF6B35';
+    const PINK = 'FF3366';
+    const TEAL = '00D4AA';
+    const WHITE = 'FFFFFF';
+    const LIGHT = 'B0C4DE';
+    const GRAY = '667788';
+
+    function addBg(slide) { slide.background = { color: BG }; }
+    function addTopLine(slide) {
+        slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.333, h: 0.08, fill: { color: BLUE }, line: { color: BLUE } });
+    }
+    function addTitle(slide, title) {
+        slide.addText(title, { x: 0.8, y: 0.3, w: 10, h: 0.7, fontSize: 32, color: WHITE, bold: true, fontFace: 'Arial' });
+        slide.addShape(pptx.ShapeType.rect, { x: 0.8, y: 1.0, w: 2, h: 0.04, fill: { color: GREEN }, line: { color: GREEN } });
+    }
+    function addCard(slide, x, y, w, h, borderColor) {
+        return slide.addShape(pptx.ShapeType.rect, {
+            x, y, w, h,
+            fill: { color: CARD },
+            line: { color: borderColor || BLUE, width: 1 }
+        });
+    }
+    function addCenterText(slide, text, x, y, w, h, opts) {
+        return slide.addText(text, Object.assign({
+            x, y, w, h, fontSize: 14, color: LIGHT, fontFace: 'Arial',
+            align: 'center', valign: 'top'
+        }, opts || {}));
+    }
+
+    // ===== SLIDE 1: Cover =====
+    status('Slide 1/12: 封面');
+    let s1 = pptx.addSlide(); addBg(s1);
+    addTopLine(s1);
+    s1.addText('智鉴药靶', { x: 1, y: 2.0, w: 11, h: 1.5, fontSize: 54, color: WHITE, bold: true, align: 'center', fontFace: 'Arial' });
+    s1.addText('中药多靶点智能预测与分子对接平台', { x: 1, y: 3.3, w: 11, h: 1, fontSize: 28, color: BLUE, align: 'center', fontFace: 'Arial' });
+    s1.addShape(pptx.ShapeType.rect, { x: 5.5, y: 4.3, w: 2.333, h: 0.04, fill: { color: GREEN }, line: { color: GREEN } });
+    s1.addText('贵州中医药大学 · 药学院', { x: 1, y: 4.8, w: 11, h: 0.6, fontSize: 18, color: GRAY, align: 'center', fontFace: 'Arial' });
+    s1.addText('2026年中国国际大学生创新大赛', { x: 1, y: 5.3, w: 11, h: 0.6, fontSize: 16, color: GRAY, align: 'center', fontFace: 'Arial' });
+
+    // ===== SLIDE 2: Project Overview =====
+    status('Slide 2/12: 项目概述');
+    let s2 = pptx.addSlide(); addBg(s2);
+    s2.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 0.08, h: 7.5, fill: { color: BLUE }, line: { color: BLUE } });
+    addTitle(s2, '项目概述');
+    s2.addText('TCM-TargetMiner 是一个面向中药现代化研究的在线智能靶点筛选平台。\n以"从一味中药发现一个全新药物靶标"为核心理念，整合网络药理学、分子对接、PPI网络分析和文献挖掘等计算方法，实现从输入一味中药名称到自动输出候选靶点及其 3D 对接结果的全流程分析。', {
+        x: 0.8, y: 1.4, w: 11.5, h: 2.0, fontSize: 16, color: LIGHT, fontFace: 'Arial', valign: 'top'
+    });
+
+    const card2 = [
+        ['痛点', '中药"多成分-多靶点"机制难研究\n现有工具碎片化：五个工具拼接\n流程割裂、无统一可视化', BLUE],
+        ['方案', '输入一味中药 → 秒出靶点 + 3D对接图\n六步全流程在线闭环\n网页端部署，无需VPN', GREEN],
+        ['优势', '全流程整合（全球首个）\nVina+Fpocket真实口袋对接\n独家苗药数据\n论文级 3D 可视化', PURPLE],
+    ];
+    for (let i = 0; i < 3; i++) {
+        let x = 0.8 + i * 4.1;
+        addCard(s2, x, 4.0, 3.8, 2.8, card2[i][2]);
+        s2.addText(card2[i][0] + '\n\n' + card2[i][1], { x: x + 0.2, y: 4.2, w: 3.4, h: 2.4, fontSize: 13, color: LIGHT, fontFace: 'Arial', valign: 'top' });
+    }
+
+    // ===== SLIDE 3: 6 Steps =====
+    status('Slide 3/12: 核心功能六步流程');
+    let s3 = pptx.addSlide(); addBg(s3); addTopLine(s3);
+    addTitle(s3, '核心功能 · 六步全流程');
+
+    const steps = [
+        ['① 成分筛选', '83味中药+8味苗药\nADME自动筛选\nOB≥30%, DL≥0.18', BLUE],
+        ['② 靶点预测', 'ECFP4分子指纹\n相似度搜索\n新颖性评分排序', GREEN],
+        ['③ PPI推断', 'STRING v11数据\nGuilt-by-Association\n疾病关联推断', ORANGE],
+        ['④ 口袋评估', 'Fpocket检测\n体积/疏水性/极性\n≥0.5可成药', PURPLE],
+        ['⑤ 分子对接', 'AutoDock Vina\n精准对接\n结合能自动回填', PINK],
+        ['⑥ 3D可视化', '论文级渲染\n氢键 2.5-3.2Å 检测\n残基标注', TEAL],
+    ];
+    for (let i = 0; i < 6; i++) {
+        let x = 0.6 + i * 2.1;
+        let card = addCard(s3, x, 1.5, 1.9, 5.0, steps[i][2]);
+        card.line.width = 0;
+        s3.addShape(pptx.ShapeType.rect, { x: x, y: 1.5, w: 1.9, h: 0.06, fill: { color: steps[i][2] } });
+        s3.addText(steps[i][0], { x: x + 0.15, y: 1.8, w: 1.6, h: 0.6, fontSize: 14, color: steps[i][2], bold: true, align: 'center', fontFace: 'Arial' });
+        s3.addText(steps[i][1], { x: x + 0.15, y: 2.5, w: 1.6, h: 3.5, fontSize: 11, color: LIGHT, align: 'center', fontFace: 'Arial', valign: 'top' });
+    }
+
+    // ===== SLIDE 4: Case Study =====
+    status('Slide 4/12: 案例验证');
+    let s4 = pptx.addSlide(); addBg(s4); addTopLine(s4);
+    addTitle(s4, '案例验证 · 半枝莲');
+    addCard(s4, 0.8, 1.4, 5.5, 5.2, BLUE);
+    s4.addText('半枝莲 (Scutellaria barbata)\n\n清热解毒药 · 贵州道地药材\n\n输入 → 13个成分\nADME筛选 → 10个活性成分\n靶点预测 → 18个候选靶点\n\n前 5 靶点：\nMAPK3 · MAPK1 · PIK3CA\nPTGS2 · AKT1\n\nVina对接验证完成 → 结合能均＜-6 kcal/mol', {
+        x: 1.0, y: 1.6, w: 5.1, h: 4.8, fontSize: 14, color: LIGHT, fontFace: 'Arial', valign: 'top'
+    });
+    addCard(s4, 6.8, 1.4, 5.7, 5.2, GREEN);
+    s4.addText('靶点分析概览\n\n• 预测靶点总数：18\n• 全新靶点（新颖性≥60%）：6\n• 具备可成药口袋：12\n• 对接有效（＜-6 kcal/mol）：9\n\n核心通路：\n• PI3K-Akt 信号通路\n• MAPK 信号通路\n• VEGF 信号通路\n\n推断疾病：肝细胞癌、乳腺癌、炎症', {
+        x: 7.0, y: 1.6, w: 5.3, h: 4.8, fontSize: 14, color: LIGHT, fontFace: 'Arial', valign: 'top'
+    });
+
+    // ===== SLIDE 5: Competition =====
+    status('Slide 5/12: 竞品对比');
+    let s5 = pptx.addSlide(); addBg(s5); addTopLine(s5);
+    addTitle(s5, '竞品对比');
+
+    const headers = ['功能', 'TCMSP', 'SwissTarget', 'HERB', '智鉴药靶'];
+    const rows = [
+        ['成分查询', '✓', '✗', '✓', '✓+苗药'],
+        ['ADME筛选', '✓', '✗', '✓', '✓'],
+        ['PPI推断', '✗', '✗', '✗', '✓'],
+        ['口袋评估', '✗', '✗', '✗', '✓'],
+        ['Vina对接', '✗', '✗', '✗', '✓'],
+        ['3D可视化', '✗', '✗', '✗', '✓'],
+        ['复方/苗药', '✗', '✗', '✗', '✓'],
+    ];
+
+    for (let j = 0; j < 5; j++) {
+        let x = 0.8 + j * 2.5;
+        let hColor = j === 4 ? BLUE : 'transparent';
+        s5.addShape(pptx.ShapeType.rect, { x, y: 1.4, w: 2.4, h: 0.6, fill: { color: j === 4 ? BLUE : CARD }, line: { color: BLUE, width: j === 4 ? 1.5 : 0.5 } });
+        s5.addText(headers[j], { x, y: 1.45, w: 2.4, h: 0.5, fontSize: 14, color: j === 4 ? WHITE : BLUE, bold: true, align: 'center', fontFace: 'Arial' });
+    }
+    for (let i = 0; i < rows.length; i++) {
+        let y = 2.05 + i * 0.55;
+        let bg = i % 2 === 0 ? CARD : '101830';
+        for (let j = 0; j < 5; j++) {
+            let x = 0.8 + j * 2.5;
+            s5.addShape(pptx.ShapeType.rect, { x, y, w: 2.4, h: 0.5, fill: { color: bg } });
+            let c = (j > 0 && rows[i][j] === '✓') ? GREEN : (j === 4 ? WHITE : LIGHT);
+            s5.addText(rows[i][j], { x, y: y + 0.02, w: 2.4, h: 0.46, fontSize: 13, color: c, bold: j === 4, align: 'center', fontFace: 'Arial' });
+        }
+    }
+
+    // ===== SLIDE 6: SWOT =====
+    status('Slide 6/12: SWOT分析');
+    let s6 = pptx.addSlide(); addBg(s6); addTopLine(s6);
+    addTitle(s6, 'SWOT 分析');
+
+    const swot = [
+        ['S', '优势', '① 全流程整合，功能覆盖度远超同类\n② 论文级 3D 可视化，可直接产出科研成果\n③ 独家苗药数据库，差异化竞争\n④ 开源免费 + 网页操作，零门槛', BLUE],
+        ['W', '劣势', '① 平台早期阶段，知名度低\n② 数据库规模（83味）有待扩充\n③ 团队规模小，人力有限', ORANGE],
+        ['O', '机会', '① "十四五"中医药发展规划政策支持\n② AI+药物研发市场热潮\n③ 贵州省苗药产业战略机遇\n④ 中医药国际化大趋势', GREEN],
+        ['T', '威胁', '① 大型生物信息学平台可能进入\n② 开源社区可能出现同类竞品\n③ 数据库更新维护的持续性挑战', PURPLE],
+    ];
+    for (let i = 0; i < 4; i++) {
+        let x = 0.8 + (i % 2) * 6.2;
+        let y = 1.4 + Math.floor(i / 2) * 2.8;
+        addCard(s6, x, y, 5.8, 2.5, swot[i][3]);
+        s6.addText(swot[i][0], { x: x + 0.2, y: y + 0.05, w: 0.4, h: 0.4, fontSize: 24, color: swot[i][3], bold: true, fontFace: 'Arial' });
+        s6.addText(swot[i][1], { x: x + 0.7, y: y + 0.05, w: 2, h: 0.4, fontSize: 18, color: swot[i][3], bold: true, fontFace: 'Arial' });
+        s6.addText(swot[i][2], { x: x + 0.2, y: y + 0.5, w: 5.4, h: 1.8, fontSize: 12, color: LIGHT, fontFace: 'Arial', valign: 'top' });
+    }
+
+    // ===== SLIDE 7: Business Model =====
+    status('Slide 7/12: 商业模式');
+    let s7 = pptx.addSlide(); addBg(s7); addTopLine(s7);
+    addTitle(s7, '商业模式');
+
+    const tiers = [
+        ['基础版\n永久免费', '学生/学者\n免费使用全部核心功能\n学术研究用途', GREEN],
+        ['高校版\n12,800元/年', '中医药院校\n批量分析+API接口\n定制报告服务', BLUE],
+        ['企业版\n2,980-20,000元/年', '中药企业（按规模）\n专属靶点筛选\n研发项目合作', ORANGE],
+        ['散客\n周18/月30/年280', '独立研究者\n灵活按需使用\n无需院校签约', PURPLE],
+    ];
+    for (let i = 0; i < 4; i++) {
+        let x = 0.8 + i * 3.15;
+        addCard(s7, x, 1.5, 2.9, 5.2, tiers[i][2]);
+        s7.addShape(pptx.ShapeType.rect, { x, y: 1.5, w: 2.9, h: 0.06, fill: { color: tiers[i][2] } });
+        s7.addText(tiers[i][0], { x: x + 0.2, y: 1.8, w: 2.5, h: 1.2, fontSize: 18, color: tiers[i][2], bold: true, align: 'center', fontFace: 'Arial', valign: 'top' });
+        s7.addText(tiers[i][1], { x: x + 0.2, y: 3.0, w: 2.5, h: 3.0, fontSize: 13, color: LIGHT, align: 'center', fontFace: 'Arial', valign: 'top' });
+    }
+
+    // ===== SLIDE 8: Global =====
+    status('Slide 8/12: 全球推广路线');
+    let s8 = pptx.addSlide(); addBg(s8); addTopLine(s8);
+    addTitle(s8, '全球推广路线');
+
+    const phases = [
+        ['2026-2027', '深耕贵州\n3所高校\n500味药材', BLUE],
+        ['2027-2028', '全国 80+院校\n2000味药材\n英文版上线', GREEN],
+        ['2028-2029', '日韩汉方市场\n40+高校\n15+企业', ORANGE],
+        ['2029-2030', '一带一路沿线\n15万用户\n全球平台', PURPLE],
+    ];
+    for (let i = 0; i < 4; i++) {
+        let x = 0.8 + i * 3.15;
+        addCard(s8, x, 2.5, 2.9, 3.5, phases[i][2]);
+        s8.addShape(pptx.ShapeType.rect, { x, y: 2.5, w: 2.9, h: 0.06, fill: { color: phases[i][2] } });
+        s8.addText(phases[i][0], { x: x + 0.2, y: 2.8, w: 2.5, h: 0.5, fontSize: 20, color: phases[i][2], bold: true, align: 'center', fontFace: 'Arial' });
+        s8.addText(phases[i][1], { x: x + 0.2, y: 3.5, w: 2.5, h: 2.3, fontSize: 14, color: LIGHT, align: 'center', fontFace: 'Arial', valign: 'top' });
+    }
+
+    // ===== SLIDE 9: Innovation =====
+    status('Slide 9/12: 核心创新点');
+    let s9 = pptx.addSlide(); addBg(s9); addTopLine(s9);
+    addTitle(s9, '核心创新点');
+
+    const innovations = [
+        ['整合创新', '六步在线全流程整合\n全球首个中药靶点挖掘一站式平台', BLUE],
+        ['方法学创新', 'Fpocket+Vina真实口袋对接\n取代传统估算结合能做法', GREEN],
+        ['数据创新', '独家收录 8 味苗药\n填补民族药物靶点研究空白', ORANGE],
+        ['可视化创新', '论文发表级 3D 渲染\n氢键检测+残基自动标注', PURPLE],
+    ];
+    for (let i = 0; i < 4; i++) {
+        let x = 0.8 + i * 3.15;
+        addCard(s9, x, 1.5, 2.9, 5.2, innovations[i][2]);
+        s9.addShape(pptx.ShapeType.rect, { x, y: 1.5, w: 2.9, h: 0.06, fill: { color: innovations[i][2] } });
+        s9.addText(innovations[i][0], { x: x + 0.2, y: 1.8, w: 2.5, h: 0.6, fontSize: 20, color: innovations[i][2], bold: true, align: 'center', fontFace: 'Arial' });
+        s9.addText(innovations[i][1], { x: x + 0.2, y: 2.8, w: 2.5, h: 3.5, fontSize: 14, color: LIGHT, align: 'center', fontFace: 'Arial', valign: 'top' });
+    }
+
+    // ===== SLIDE 10: Team =====
+    status('Slide 10/12: 团队介绍');
+    let s10 = pptx.addSlide(); addBg(s10); addTopLine(s10);
+    addTitle(s10, '团队介绍');
+
+    const team = [
+        ['项目负责人', '平台架构、核心算法\n全栈开发'],
+        ['技术总监', '对接引擎优化\n数据库运维'],
+        ['数据科学家', '中药数据挖掘\n网络药理学'],
+        ['市场总监', '高校企业合作\n品牌推广'],
+        ['产品经理', '需求调研\n迭代规划'],
+        ['运营财务', '平台运营\n预算行政'],
+    ];
+    for (let i = 0; i < 6; i++) {
+        let x = 0.8 + (i % 3) * 4.1;
+        let y = 1.5 + Math.floor(i / 3) * 2.8;
+        addCard(s10, x, y, 3.8, 2.4, BLUE);
+        s10.addText(team[i][0], { x: x + 0.2, y: y + 0.15, w: 3.4, h: 0.5, fontSize: 18, color: BLUE, bold: true, align: 'center', fontFace: 'Arial' });
+        s10.addText(team[i][1], { x: x + 0.2, y: y + 0.8, w: 3.4, h: 1.3, fontSize: 13, color: LIGHT, align: 'center', fontFace: 'Arial', valign: 'top' });
+    }
+
+    // ===== SLIDE 11: Finance =====
+    status('Slide 11/12: 财务预测');
+    let s11 = pptx.addSlide(); addBg(s11); addTopLine(s11);
+    addTitle(s11, '财务预测');
+    s11.addText('每年盈利，不烧钱。\n开源技术栈零边际成本 · 学校计算资源支持 · 无商业授权依赖', {
+        x: 0.8, y: 1.4, w: 11.5, h: 1.2, fontSize: 18, color: LIGHT, fontFace: 'Arial', valign: 'top'
+    });
+
+    addCard(s11, 0.8, 3.0, 5.5, 3.5, GREEN);
+    s11.addText('营收预测\n\n2026年：3所高校 × 12,800 = 38,400元\n2027年：15所高校 × 12,800 = 192,000元\n2028年：40+高校 × 12,800 = 512,000+\n2029-30年：15万用户 + 企业版\n\n成本极低，利润率 > 70%', {
+        x: 1.0, y: 3.2, w: 5.1, h: 3.1, fontSize: 14, color: LIGHT, fontFace: 'Arial', valign: 'top'
+    });
+
+    addCard(s11, 6.8, 3.0, 5.7, 3.5, BLUE);
+    s11.addText('里程碑\n\n2026年：500味药材 · 3所高校 · 软著\n2027年：2000味 · MD模拟上线 · 英文版\n2028年：日韩版 · 12人团队 · 40+高校\n2029年：东南亚版\n2030年：全球多医学体系平台', {
+        x: 7.0, y: 3.2, w: 5.3, h: 3.1, fontSize: 14, color: LIGHT, fontFace: 'Arial', valign: 'top'
+    });
+
+    // ===== SLIDE 12: Thank You =====
+    status('Slide 12/12: 致谢');
+    let s12 = pptx.addSlide(); addBg(s12); addTopLine(s12);
+    s12.addText('智鉴药靶', { x: 1, y: 2.5, w: 11, h: 1.5, fontSize: 48, color: WHITE, bold: true, align: 'center', fontFace: 'Arial' });
+    s12.addShape(pptx.ShapeType.rect, { x: 5.5, y: 3.8, w: 2.333, h: 0.04, fill: { color: GREEN }, line: { color: GREEN } });
+    s12.addText('感谢聆听 · 敬请指导', { x: 1, y: 4.0, w: 11, h: 0.8, fontSize: 28, color: BLUE, align: 'center', fontFace: 'Arial' });
+    s12.addText('周鑫芸 | 贵州中医药大学 药学院', { x: 1, y: 5.0, w: 11, h: 0.6, fontSize: 18, color: GRAY, align: 'center', fontFace: 'Arial' });
+
+    status('正在生成PPTX文件...');
+    // Generate and download
+    pptx.writeFile({ fileName: '智鉴药靶_路演PPT.pptx' })
+        .then(() => {
+            status('✅ 下载完成！文件已保存到浏览器默认下载位置。');
+            document.body.innerHTML += '<p style="color:#00e676;font-size:18px;text-align:center;">PPTX 已生成并下载！</p>';
+        })
+        .catch(err => {
+            status('❌ 生成失败: ' + err.message);
+        });
+}
+
+// Auto-run on page load
+window.onload = function() { setTimeout(generate, 500); };
+</script>
+</body></html>

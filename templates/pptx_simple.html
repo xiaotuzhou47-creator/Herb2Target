@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>PPTX Test</title>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+</head>
+<body>
+<script>
+async function gen() {
+  let pptx = new PptxGenJS();
+  pptx.defineLayout({ name: 'WIDE', width: 13.333, height: 7.5 });
+  pptx.layout = 'WIDE';
+  let s1 = pptx.addSlide();
+  s1.background = { color: '0A0E27' };
+  s1.addText('TEST SLIDE 1', { x: 1, y: 1, w: 10, h: 2, fontSize: 48, color: '00BBF9', bold: true, align: 'center' });
+  let s2 = pptx.addSlide();
+  s2.background = { color: '0A0E27' };
+  s2.addText('TEST SLIDE 2', { x: 1, y: 1, w: 10, h: 2, fontSize: 48, color: '00E676', bold: true, align: 'center' });
+  
+  let blob = await pptx.write({ outputType: 'blob' });
+  let url = URL.createObjectURL(blob);
+  let a = document.createElement('a');
+  a.href = url;
+  a.download = 'test.pptx';
+  a.click();
+  URL.revokeObjectURL(url);
+  document.body.innerHTML = '<div style="color:green;font-size:24px;text-align:center;margin-top:200px;">DONE - check downloads!</div>';
+}
+gen().catch(e => { document.body.innerHTML = '<div style="color:red;font-size:18px;">Error: ' + e.message + '<br><pre>' + e.stack + '</pre></div>'; });
+</script>
+</body></html>

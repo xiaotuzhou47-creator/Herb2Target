@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TCM-TargetMiner v2 · 中药靶点筛选平台</title>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+<script src="https://unpkg.com/vue@3.3.4/dist/vue.global.js"></script>
+<script src="https://unpkg.com/element-plus"></script>
+<script src="https://unpkg.com/@element-plus/icons-vue"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC',sans-serif;background:#f0f2f5;color:#303133}
+.header{text-align:center;padding:30px 20px 15px}
+.header h1{font-size:32px;font-weight:800;background:linear-gradient(135deg,#409EFF,#67C23A);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.tag{margin-left:8px}
+.main{max-width:960px;margin:0 auto;padding:0 20px 40px}
+h2{font-size:18px;margin:24px 0 12px;color:#303133}
+.el-alert{margin-bottom:16px}
+.summary-grid{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.summary-card{background:#fff;border-radius:8px;padding:12px 18px;text-align:center;flex:1;min-width:100px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.summary-card .num{font-size:28px;font-weight:700}
+.summary-card .label{font-size:12px;color:#909399;margin-top:4px}
+.summary-card.novel{background:#fef0f0}
+.summary-card.novel .num{color:#F56C6C}
+.summary-card.pocket{background:#f6ffed}
+.summary-card.pocket .num{color:#67C23A}
+.card{background:#fff;border-radius:8px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.card-title{font-weight:700;margin-bottom:8px;font-size:14px}
+.herb-list{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.herb-tag{cursor:pointer;padding:4px 10px;border-radius:12px;font-size:13px;border:1px solid #dcdfe6;background:#fff;transition:all .2s}
+.herb-tag:hover{border-color:#409EFF;color:#409EFF}
+.herb-tag.active{background:#409EFF;color:#fff;border-color:#409EFF}
+.input-row{display:flex;gap:8px;margin:8px 0}
+.input-row input{flex:1;padding:8px 12px;border:1px solid #dcdfe6;border-radius:6px;font-size:14px}
+.input-row button{padding:8px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px}
+.btn-primary{background:linear-gradient(135deg,#409EFF,#337ecc);color:#fff}
+.btn-success{background:linear-gradient(135deg,#67C23A,#529b2e);color:#fff}
+.btn-danger{background:#f5f5f5;color:#909399;border:1px solid #dcdfe6!important}
+.btn-danger:hover{color:#F56C6C;border-color:#F56C6C!important}
+.el-table{font-size:13px}
+.el-table .cell{padding:6px 8px}
+.footer-note{margin-top:16px;padding:12px;background:#fffbe6;border-radius:6px;font-size:12px;color:#E6A23C;line-height:1.8}
+.dock-dialog-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center}
+.dock-dialog{background:#fff;border-radius:12px;width:700px;max-width:90vw;max-height:90vh;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.3)}
+.dock-header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid #f0f0f0}
+.dock-header h3{font-size:16px;margin:0}
+.dock-header button{border:none;background:none;font-size:20px;cursor:pointer;color:#909399}
+.dock-body{padding:16px 20px;max-height:600px;overflow-y:auto}
+.dock-loading{text-align:center;padding:60px 0;color:#909399}
+.dock-loading .icon{font-size:40px;margin-bottom:12px}
+.dock-stats{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.dock-stat{flex:1;min-width:100px;border-radius:6px;padding:8px 14px;text-align:center}
+.dock-stat .sv{font-size:22px;font-weight:700}
+.dock-stat .sl{font-size:11px;color:#909399}
+.dock-row{display:flex;gap:16px;flex-wrap:wrap}
+.dock-viewer{border:1px solid #e8e8e8;border-radius:6px;background:#fff;overflow:hidden}
+.dock-info{background:#fffbe6;border:1px solid #ffd591;border-radius:8px;padding:16px;text-align:center}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <h1>TCM-TargetMiner</h1>
+    <div style="color:#909399;font-size:13px">Herb2Target · 中药靶点筛选平台</div>
+    <el-tooltip content="本平台为假设生成工具，计算结果仅供学术参考" placement="bottom">
+      <el-tag size="small" type="warning" effect="plain" style="cursor:help">假设生成工具</el-tag>
+    </el-tooltip>
+    <el-tag class="tag" size="small" type="info">v1.0</el-tag>
+    <el-tag id="server-status" size="small" type="danger" style="margin-left:8px">⚠ 后端未连接</el-tag>
+  </div>
+
+  <div class="main">
+    <!-- 模式切换 -->
+    <div style="display:flex;justify-content:center;gap:12px;margin-bottom:20px">
+      <button @click="switchMode('herb')" :style="modeBtn('herb')">中药靶点筛选</button>
+      <button @click="switchMode('molecule')" :style="modeBtn('molecule')">小分子靶点预测</button>
+    </div>
+
+    <!-- ====== 中药筛选 ====== -->
+    <div v-show="mode==='herb'">
+      <!-- 子模式 -->
+      <div style="display:flex;gap:12px;justify-content:center;margin-bottom:16px">
+        <button @click="subMode='tcm'" :style="subBtn('tcm')">中药</button>
+        <button @click="subMode='miao'" :style="subBtn('miao')">苗药</button>
+        <button @click="subMode='formula'" :style="subBtn('formula')">复方</button>
+      </div>
+
+      <h2 v-if="subMode==='formula'">从经典复方<br><small style='font-size:13px;color:#909399;font-weight:400'>发现协同靶标网络</small></h2>
+      <h2 v-else>从一味{{ subMode==='tcm'?'中药':'苗药' }}<br><small style='font-size:13px;color:#909399;font-weight:400'>发现全新药物靶标</small></h2>
+
+      <!-- 复方快捷 -->
+      <div v-if="subMode==='formula'" class="card">
+        <div class="card-title">经典复方（点击加载）</div>
+        <div class="herb-list">
+          <span v-for="f in formulas" class="herb-tag" @click="selectFormula(f)">{{ f.name }} <small>({{ f.herbs.length }}味)</small></span>
+        </div>
+      </div>
+
+      <!-- 中药搜索 -->
+      <div class="input-row">
+        <input :placeholder="subMode==='formula'?'搜索中药名称，按回车添加...':'输入'+(subMode==='tcm'?'中药':'苗药')+'名称按回车添加...'" 
+               v-model="searchText" @keyup.enter="addSearchText" @input="searchHerb" 
+               @focus="showSearchResults=true">
+      </div>
+      <div v-if="showSearchResults && searchResults.length" style="position:relative">
+        <div style="position:absolute;top:0;left:0;right:0;background:#fff;border:1px solid #dcdfe6;border-radius:6px;z-index:100;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+          <div v-for="h in searchResults" @click="selectSearchedHerb(h.name)" 
+               style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f5f5f5;font-size:14px"
+               @mouseenter="$event.target.style.background='#f0f5ff'" 
+               @mouseleave="$event.target.style.background=''">
+            {{ h.name }} <small style="color:#909399">({{ h.active }} 活性成分)</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- 已选中药 -->
+      <div v-if="selectedHerbs.length" class="herb-list">
+        <span v-for="(h,i) in selectedHerbs" class="herb-tag active" @click="toggleHerb(h)">
+          {{ h }} <small style="opacity:0.7;margin-left:4px">✕</small>
+        </span>
+      </div>
+
+      <div class="input-row">
+        <button class="btn-primary" @click="runAnalysis" :disabled="loading || !selectedHerbs.length" style="width:100%">
+          {{ loading ? '正在分析中...' : '开始靶点筛选' }}
+        </button>
+        <button class="btn-danger" @click="resetAnalysis" v-show="showResult">清空结果</button>
+      </div>
+
+      <!-- 错误提示（独立，不受showResult影响） -->
+      <div v-if="analyzeError" style="background:#fef0f0;border:1px solid #fbc4c4;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#F56C6C;font-size:13px">
+        ⚠️ {{ analyzeError }} <span @click="analyzeError=''" style="float:right;cursor:pointer;font-size:16px;line-height:1">x</span>
+      </div>
+
+      <!-- ====== 分析结果 ====== -->
+      <div v-if="showResult && resultData && resultData.targets" style="margin-top:20px">
+
+        <!-- 对接按钮说明（最显眼） -->
+        <div style="background:#fff3e0;border:2px solid #ff9800;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#e65100;line-height:1.6">
+          ⚡ <b>部分靶点无对接按钮说明：</b>仅口袋可成药性评分 ≥ 0.5 的靶点开放对接。评分依据 Fpocket 算法（Le Guilloux et al., <i>BMC Bioinformatics</i>, 2009）检测口袋体积、疏水性和极性。评分 &lt; 0.5 的靶点口袋过小或理化性质不佳，对接成功率极低，为节省算力不提供对接入口。
+        </div>
+        
+        <!-- 评分方法说明 -->
+        <div style="background:#ecf5ff;border:1px solid #b3d8ff;border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:12px;color:#409EFF;line-height:1.6">
+          <b>排序说明：</b>按新颖性评分降序排列（基于 PubMed 文献计数），各维度独立评估更可靠。<br>
+          <b>新颖性：</b>基于 PubMed 文献计数，总文献越少、疾病关联占比越低则越新颖（阈值 ≥ 60% 标记为全新靶点）。<br>
+          <b>口袋可成药性：</b>Fpocket 算法（Le Guilloux et al., <i>BMC Bioinformatics</i>, 2009; Schmidtke et al., <i>Nucleic Acids Res</i>, 2010）检测口袋体积/疏水性/极性，≥ 0.5 视为潜在可成药。<br>
+          <b>结合能：</b>AutoDock Vina（Trott &amp; Olson, <i>J Comput Chem</i>, 2010; Eberhardt et al., <i>JCIM</i>, 2021）分子对接计算，需点击对接获取真实值。<br>
+          <b>PPI推断：</b>STRING v11 蛋白互作网络（Szklarczyk et al., <i>Nucleic Acids Res</i>, 2019），通过疾病关联伙伴数推断靶点-疾病关系。
+        </div>
+
+        <!-- 总览卡片 -->
+        <div class="summary-grid">
+          <div class="summary-card"><div class="num">{{ resultData.target_count }}</div><div class="label">预测靶点总数</div></div>
+          <div class="summary-card novel"><div class="num">{{ novelTargets.length }}</div><div class="label">全新靶点 (新颖性≥60%)</div></div>
+          <div class="summary-card pocket"><div class="num">{{ stats.pocketCount }}</div><div class="label">具备可成药口袋</div></div>
+          <div class="summary-card" style="background:#f0f9eb;border-color:#b7eb8f"><div class="num" style="color:#67C23A">{{ stats.bindingCount }}</div><div class="label">对接有效 (&lt;-6 kcal/mol)</div></div>
+        </div>
+
+        <!-- 靶点概览表 -->
+        <div class="card" style="overflow-x:auto">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+            <span>🎯 靶点概览 · {{ resultData.target_name || selectedHerbs.join('+') }}</span>
+            <input v-model="filterText" placeholder="搜索基因名..." style="padding:4px 10px;border:1px solid #dcdfe6;border-radius:4px;font-size:12px;width:160px">
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:700px">
+            <thead>
+              <tr style="background:#f5f7fa;border-bottom:2px solid #e4e7ed">
+                <th style="padding:8px 6px;text-align:left;width:40px">#</th>
+                <th style="padding:8px 6px;text-align:left;width:90px">基因</th>
+                <th style="padding:8px 6px;text-align:left;width:85px">UniProt</th>
+                <th style="padding:8px 6px;text-align:left;min-width:140px">相关成分</th>
+                <th style="padding:8px 6px;text-align:center;width:65px">新颖性</th>
+                <th style="padding:8px 6px;text-align:center;width:60px">口袋</th>
+                <th style="padding:8px 6px;text-align:center;width:70px">结合力</th>
+                <th style="padding:8px 6px;text-align:left;min-width:120px">推断疾病</th>
+                <th style="padding:8px 6px;text-align:center;width:60px">对接</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(t,i) in displayTargets" :key="t.gene_name" 
+                  :style="{borderBottom:'1px solid #f0f0f0',background:t.novelty_score>=0.6?'#fef8f8':i%2==0?'#fafafa':'#fff'}"
+                  @mouseenter="$event.currentTarget.style.background='#ecf5ff'"
+                  @mouseleave="$event.currentTarget.style.background=t.novelty_score>=0.6?'#fef8f8':i%2==0?'#fafafa':'#fff'">
+                <td style="padding:8px 6px;color:#909399">{{ i+1 }}</td>
+                <td style="padding:8px 6px">
+                  <span v-if="t.novelty_score>=0.6" style="background:#F56C6C;color:#fff;padding:1px 5px;border-radius:3px;font-size:10px;margin-right:4px">新</span>
+                  <b :style="{color:t.novelty_score>=0.6?'#F56C6C':'#303133'}">{{ t.gene_name }}</b>
+                </td>
+                <td style="padding:8px 6px;color:#909399;font-size:11px">{{ t.uniprot_id }}</td>
+                <td style="padding:8px 6px">
+                  <div style="display:flex;flex-wrap:wrap;gap:3px">
+                    <span v-for="ing in (t.ingredients||[])"
+                          style="background:#f0f9eb;color:#67C23A;padding:1px 6px;border-radius:3px;font-size:11px;white-space:nowrap;margin-bottom:2px">
+                      {{ ing.replace(' ✓','').replace(' ✗','') }}
+                    </span>
+                  </div>
+                </td>
+                <td style="padding:8px 6px;text-align:center">
+                  <span :style="{fontWeight:'bold',color:t.novelty_score>=0.6?'#F56C6C':'#909399'}">{{ (t.novelty_score*100).toFixed(0) }}%</span>
+                </td>
+                <td style="padding:8px 6px;text-align:center">
+                  <span :style="{fontWeight:'bold',color:t.pocket_score>=0.5?'#67C23A':(t.pocket_score!=null&&t.pocket_score>=0?'#E6A23C':'#909399')}">
+                    {{ t.pocket_score!=null ? (t.pocket_score*100).toFixed(0)+'%' : (t.ps_warning || 'N/A') }}
+                    <small v-if="t.pocket_score>=0.3&&t.pocket_score<0.5" style="display:block;font-size:9px;color:#E6A23C">{{ '\u6D45\u5C42\u53E3\u888B' }}</small>
+                    <small v-if="t.pocket_score<0.3&&t.pocket_score>0" style="display:block;font-size:9px;color:#F56C6C">{{ '\u672A\u68C0\u6D4B\u53E3\u888B' }}</small>
+                  </span>
+                </td>
+                <td style="padding:8px 6px;text-align:center">
+                  <span v-if="t.binding!=null" :style="{fontWeight:'bold',color:t.binding<=-6?'#67C23A':'#E6A23C'}">
+                    {{ t.binding.toFixed(1) }}
+                  </span>
+                  <span v-else style="color:#909399;font-size:10px">点击对接</span>
+                </td>
+                <td style="padding:8px 6px">
+                  <div style="display:flex;flex-wrap:wrap;gap:3px">
+                    <span v-for="(d,j) in (t.diseases||[]).slice(0,3)" 
+                          style="background:#ecf5ff;color:#409EFF;padding:1px 6px;border-radius:3px;font-size:10px">
+                      {{ d[0] }}
+                    </span>
+                    <span v-if="!(t.diseases||[]).length" style="color:#c0c4cc;font-size:10px">-</span>
+                  </div>
+                </td>
+                <td style="padding:8px 6px;text-align:center">
+                  <button v-if="t.has_pocket && t.pocket_score>=0.5" 
+                          @click="runDock({uniprot_id:t.uniprot_id,gene_name:t.gene_name,has_pocket:true,top_smiles:t.top_smiles,top_ingredient:t.top_ingredient})"
+                          style="font-size:11px;padding:3px 10px;border:1px solid #67C23A;border-radius:4px;background:#fff;color:#67C23A;cursor:pointer;white-space:nowrap"
+                          @mouseenter="$event.target.style.background='#67C23A';$event.target.style.color='#fff'"
+                          @mouseleave="$event.target.style.background='#fff';$event.target.style.color='#67C23A'">
+                    ⚡对接
+                  </button>
+                  <span v-else style="color:#c0c4cc;font-size:10px">-</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 成分→靶点关系矩阵 -->
+        <div class="card" style="margin-top:16px">
+          <div class="card-title">🧬 成分 → 靶点关系 · 按结合能排序</div>
+          <div v-for="(ing,idx) in ingredientView" :key="ing.name" 
+               style="border-bottom:1px solid #f0f0f0;padding:12px 0"
+               :style="{background:idx%2==0?'#fafafa':'#fff'}">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-weight:700;color:#303133;font-size:14px">{{ ing.name }}</span>
+              <span style="background:#ecf5ff;color:#409EFF;padding:2px 10px;border-radius:12px;font-size:12px">
+                → {{ ing.targets.length }} 个靶点
+              </span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;padding-left:8px">
+              <div v-for="t in ing.targets" 
+                   style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e8e8e8;border-radius:6px;padding:6px 12px;font-size:12px;transition:all .15s"
+                   @mouseenter="$event.currentTarget.style.borderColor='#409EFF';$event.currentTarget.style.boxShadow='0 2px 8px rgba(64,158,255,0.15)'"
+                   @mouseleave="$event.currentTarget.style.borderColor='#e8e8e8';$event.currentTarget.style.boxShadow='none'">
+                <b style="color:#303133;width:60px">{{ t.gene }}</b>
+                <span style="color:#909399;width:60px;font-size:11px">{{ t.uniprot }}</span>
+                <span v-if="t.binding!=null" 
+                      :style="{fontWeight:'bold',color:t.binding<=-6?'#67C23A':'#E6A23C',width:'70px',textAlign:'right'}">
+                  {{ t.binding.toFixed(1) }} kcal/mol
+                </span>
+                <span v-else style="color:#909399;font-size:10px;width:70px;textAlign:'right'">
+                  点击对接
+                </span>
+                <button @click="runDock({uniprot_id:t.uniprot,gene_name:t.gene,has_pocket:true,top_smiles:ing.smiles,top_ingredient:ing.name})" 
+                        style="font-size:10px;padding:2px 8px;border:1px solid #67C23A;border-radius:4px;background:#fff;color:#67C23A;cursor:pointer;white-space:nowrap"
+                        @mouseenter="$event.target.style.background='#67C23A';$event.target.style.color='#fff'"
+                        @mouseleave="$event.target.style.background='#fff';$event.target.style.color='#67C23A'">
+                  ⚡对接
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-note" style="margin-top:16px">
+          <strong>假设生成工具声明：</strong>综合分用于优先级排序，不代表靶点真实有效性。新颖靶点（红色）实验文献少、不确定性更高，但更有潜力。所有结果需经实验验证。
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ====== 小分子预测 ====== -->
+    <div v-show="mode==='molecule'">
+      <h2>输入一个小分子<br><small style="font-size:13px;color:#909399;font-weight:400">预测它的药物靶标</small></h2>
+      <div class="card">
+        <div class="card-title">SMILES 结构式</div>
+        <small style="color:#909399">例如: C1=CC=C(C=C1)C2=CC(=O)C3=C(C=C(C(=C3O2)O)O)O （黄芩素）</small>
+        <div class="input-row">
+          <input v-model="smilesText" placeholder="输入 SMILES 字符串，按回车预测..." @keyup.enter="predictMolecule">
+          <button class="btn-success" @click="predictMolecule" :disabled="molLoading || !smilesText">
+            {{ molLoading ? '计算中...' : '预测靶点' }}
+          </button>
+        </div>
+      </div>
+
+      <div v-if="moleculeResult">
+        <div class="summary-grid">
+          <div class="summary-card"><div class="num">{{ moleculeResult.target_count }}</div><div class="label">预测靶点总数</div></div>
+          <div class="summary-card novel"><div class="num">{{ moleculeResult.targets.filter(t=>t.novelty_score>=0.6).length }}</div><div class="label">全新靶点</div></div>
+          <div class="summary-card"><div class="num">{{ moleculeResult.similar_compounds.length }}</div><div class="label">相似化合物</div></div>
+        </div>
+        <div class="card" v-if="moleculeResult.similar_compounds.length">
+          <div class="card-title">相似化合物（基于 ECFP 指纹匹配）</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <div v-for="(c,i) in moleculeResult.similar_compounds" style="background:#f0f5ff;border:1px solid #d0d9ff;border-radius:6px;padding:6px 12px;font-size:13px">
+              <b>#{{ i+1 }}</b> {{ c.name }}
+              <span style="color:#909399;font-size:11px">相似度 {{ (c.similarity*100).toFixed(1) }}% | Z={{ c.zscore }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">预测靶点</div>
+          <el-table :data="moleculeResult.targets" size="small" stripe max-height="400">
+            <el-table-column label="基因" prop="gene_name" width="100"></el-table-column>
+            <el-table-column label="证据分" width="70">
+              <template #default="s">{{ (s.row.confidence*100).toFixed(0) }}%</template>
+            </el-table-column>
+            <el-table-column label="新颖性" width="70">
+              <template #default="s"><span :style="{color:s.row.novelty_score>=0.6?'#F56C6C':'#909399'}">{{ (s.row.novelty_score*100).toFixed(0) }}%</span></template>
+            </el-table-column>
+            <el-table-column label="可药性" width="100">
+              <template #default="s">
+                <span v-if="s.row.pocket_score == null" style="color:#c0c4cc;font-size:11px">无结构</span>
+                <span v-else-if="s.row.pocket_score < 0.5" style="color:#909399;font-size:11px">口袋不合适</span>
+                <span v-else-if="s.row.docking_auc != null && s.row.docking_auc < 0.5" style="color:#E6A23C;font-size:11px">对接不可靠</span>
+                <span v-else style="color:#67C23A;font-size:11px">可对接</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="来源" prop="source" width="80"></el-table-column>
+            <el-table-column label="结合能" width="85">
+              <template #default="s">
+                <span v-if="s.row.dockedAffinity" :style="{color:s.row.dockedAffinity<=-6?'#67C23A':'#E6A23C',fontWeight:'bold'}">{{ s.row.dockedAffinity.toFixed(2) }} kcal/mol</span>
+                <span v-else style="color:#c0c4cc;font-size:11px">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="置信度" width="80">
+              <template #default="s">
+                <span v-if="s.row.confidence" :style="{color:s.row.confidence<=-2?'#67C23A':s.row.confidence<=-1?'#E6A23C':'#F56C6C',fontWeight:'bold',fontSize:'12px'}">{{ s.row.confidence.toFixed(2) }}</span>
+                <span v-else style="color:#c0c4cc;font-size:11px">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="对接" width="70" align="center">
+              <template #default="s">
+                <button v-if="s.row.has_pocket" @click="runDock(s.row)" style="font-size:11px;padding:2px 8px;border:1px solid #67C23A;border-radius:4px;background:#fff;color:#67C23A;cursor:pointer">⚡对接</button>
+                <span v-else style="font-size:11px;color:#c0c4cc">无结构</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 对接弹窗 ====== -->
+  <div class="dock-dialog-overlay" v-if="showDockDialog" @click.self="showDockDialog=false">
+    <div class="dock-dialog">
+      <div class="dock-header">
+        <h3>分子对接结果 <small v-if="dockingTarget" style="color:#67C23A">{{ dockingTarget.gene_name }} ({{ dockingTarget.uniprot_id }})</small><br v-if="dockingIngredient"><small v-if="dockingIngredient" style="color:#E6A23C;font-size:12px">对接分子: {{ dockingIngredient }}</small></h3>
+        <button @click="showDockDialog=false">&times;</button>
+      </div>
+      <div class="dock-body">
+        <div v-if="dockingLoading" class="dock-loading">
+          <div class="icon">⏳</div>
+          <div>正在运行 AutoDock Vina 对接...</div>
+          <div style="font-size:12px;margin-top:4px">obabel 生成 3D 构象 + Vina 打分，约需 20-60 秒</div>
+        </div>
+        <template v-if="!dockingLoading && dockingResult">
+          <div v-if="dockingResult.status=='error'" style="text-align:center;padding:40px;color:#F56C6C">
+            <div style="font-size:40px;margin-bottom:12px">⚠️</div>
+            <div>{{ dockingResult.message || '对接失败' }}</div>
+          </div>
+          <template v-if="dockingResult.status!='error'">
+          <div class="dock-stats">
+            <div class="dock-stat" style="background:#f6ffed;border:1px solid #b7eb8f">
+              <div class="sl">结合能</div>
+              <div class="sv" style="color:#52c41a">{{ dockingResult.affinity != null ? dockingResult.affinity.toFixed(2) : 'N/A' }} <small>kcal/mol</small></div>
+            </div>
+            <div class="dock-stat" style="background:#f0f5ff;border:1px solid #91caff">
+              <div class="sl">方法</div>
+              <div class="sv" style="color:#1677ff;font-size:16px">{{ dockingResult.method || '—' }}</div>
+            </div>
+            <div class="dock-stat" style="background:#fff7e6;border:1px solid #ffd591" v-if="dockingResult.confidence != null">
+              <div class="sl">置信度</div>
+              <div class="sv" style="color:#fa8c16;font-size:18px;font-weight:900">{{ dockingResult.confidence.toFixed(3) }}</div>
+              <div style="font-size:10px;color:#bbb;margin-top:2px">位姿距口袋 {{ dockingResult.pose_dist }} Å</div>
+            </div>
+          </div>
+          <div v-if="!dockingResult.pose_sdf || !dockingResult.receptor_pdb" style="text-align:center;padding:30px;color:#909399">
+            <template v-if="dockingResult.method && dockingResult.method.indexOf('Fpocket')>=0">
+              <div style="font-size:15px;margin-bottom:8px">&#9888;&#65039; 该分子结构较大/复杂，AutoDock Vina 无法生成有效对接姿势</div>
+              <div style="font-size:12px;color:#bbb;line-height:1.8">显示结合能为 Fpocket 口袋打分估算值（Le Guilloux et al., <i>BMC Bioinformatics</i>, 2009），仅供排序参考，非真实对接结果。<br>建议优先选择分子量较小的活性成分进行对接验证。</div>
+            </template>
+            <template v-else>
+              暂无 3D 结构数据，请重试
+            </template>
+          </div>
+          <div v-else class="dock-row">
+            <div id="dock-viewer-3d" class="dock-viewer" style="flex:2;min-width:400px;height:400px"></div>
+            <div class="dock-info" style="flex:1;min-width:180px">
+              <div style="font-size:11px;color:#909399">PDB 模板</div>
+              <div style="font-size:24px;font-weight:900">{{ dockingResult.pdb || '—' }}</div>
+              <div style="margin-top:12px;font-size:11px;color:#909399">结合能</div>
+              <div style="font-size:22px;font-weight:900;color:#E6A23C">{{ dockingResult.affinity != null ? dockingResult.affinity.toFixed(2) : 'N/A' }} <small>kcal/mol</small></div>
+              <div v-if="dockingResult.confidence != null" style="margin-top:8px;padding:6px 8px;background:#fff7e6;border-radius:4px;border:1px solid #ffd591">
+                <div style="font-size:11px;color:#909399">置信度（口袋评分×位姿验证）</div>
+                <div style="font-size:20px;font-weight:900;color:#fa8c16">{{ dockingResult.confidence.toFixed(3) }}</div>
+                <div style="font-size:10px;color:#bbb">位姿偏离口袋 {{ dockingResult.pose_dist }} Å</div>
+              </div>
+              <div style="font-size:11px;color:#c0c4cc;margin-top:8px">{{ dockingResult.ligand_smiles ? dockingResult.ligand_smiles.substring(0,30)+'…' : '' }}</div>
+              <button @click="downloadDockImage" v-if="!dockingLoading && dockingResult && dockingResult.status!='error'" style="margin-top:12px;padding:6px 16px;border:1px solid #409EFF;border-radius:4px;background:#fff;color:#409EFF;cursor:pointer;font-size:12px;width:100%">
+                📷 导出高清截图 (300dpi)
+              </button>
+            </div>
+          </div>
+          </template>
+        </template>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const {ref, reactive, computed, watch, nextTick, onMounted, createApp} = Vue;
+let dockViewer = null;
+
+function renderDockViewer(data) {
+  var el = document.getElementById('dock-viewer-3d');
+  if (!el) return;
+  if (!window.$3Dmol) { el.innerHTML = '3Dmol 未加载'; return; }
+  if (dockViewer) { dockViewer.clear(); dockViewer.removeAllSurfaces(); }
+  
+  // 清空旧内容
+  el.innerHTML = '';
+  
+  try {
+    // 检测实际姿势数据格式
+    var poseData = data.pose_sdf || data.pose_pdbqt || '';
+    var hasLigand = poseData && poseData.length > 50;
+    var hasReceptor = data.receptor_pdb && data.receptor_pdb.length > 200;
+    
+    // 无受体时尝试下载 PDB（仅当有 pdb 字段且后端没返回受体片段）
+    if (!hasReceptor && data.pdb) {
+      el.innerHTML = '<div style="text-align:center;padding:60px;color:#909399">正在下载 PDB '+data.pdb+'...</div>';
+      fetch('https://files.rcsb.org/download/'+data.pdb+'.pdb')
+        .then(function(r){ if(!r.ok) throw r.status; return r.text(); })
+        .then(function(t){ data.receptor_pdb = t; renderDockViewer(data); })
+        .catch(function(){
+          // RCSB 失败，尝试 AlphaFold
+          el.innerHTML = '<div style="text-align:center;padding:60px;color:#909399">从 AlphaFold 下载结构...</div>';
+          renderDockViewer(data);
+        });
+      return;
+    }
+    
+    if (!hasLigand && hasReceptor) {
+      el.innerHTML = '<div style="text-align:center;padding:60px;color:#909399">无对接姿势数据<br><small>Vina 未生成有效对接结果</small></div>';
+      return;
+    }
+    if (!hasLigand && !hasReceptor) {
+      el.innerHTML = '<div style="text-align:center;padding:60px;color:#909399">无可用结构数据</div>';
+      return;
+    }
+    
+    dockViewer = $3Dmol.createViewer(el, {backgroundColor:'white', antialias:true});
+    dockViewer.setBackgroundColor('white');
+    
+    var recModelIdx = -1, ligModelIdx = -1;
+    
+    // 渲染受体
+    if (hasReceptor) {
+      var recPDB = data.receptor_pdb;
+      var lines = recPDB.split('\n');
+      var clean = lines.filter(function(l){
+        return l.substring(0,4)==='ATOM' || l.substring(0,3)==='TER' || l.substring(0,3)==='END';
+      }).join('\n');
+      if (clean.length > 50) {
+        dockViewer.addModel(clean, 'pdb');
+        recModelIdx = 0;
+        dockViewer.setStyle({model:0}, {cartoon:{color:'#E8DDE0', thickness:0.4}});
+        // 口袋表面：半透明
+        dockViewer.addSurface($3Dmol.SurfaceType.SAS, {opacity:0.15, color:'#F5E8EC'}, {model:0});
+      }
+    }
+    
+    // 渲染配体（优先 SDF，回退 PDBQT）
+    if (hasLigand) {
+      var ligStr = poseData;
+      var isSDF = ligStr.indexOf('V2000') >= 0 || ligStr.indexOf('$$$$') >= 0;
+      var isMol2 = ligStr.indexOf('@<TRIPOS>') >= 0;
+      var fmt = isSDF ? 'sdf' : (isMol2 ? 'mol2' : 'pdb');
+      dockViewer.addModel(ligStr, fmt);
+      ligModelIdx = hasReceptor ? 1 : 0;
+      dockViewer.setStyle({model:ligModelIdx}, {stick:{radius:0.35,color:'#E75480'}, sphere:{radius:0.45,color:'#E75480'}});
+    }
+    
+    // 氢键：从 3Dmol 直接取坐标
+    if (hasReceptor && hasLigand) {
+      var recAtoms = [], ligAtoms = [];
+      var nearRes = {};  // 口袋附近残基
+      var rlines = data.receptor_pdb.split('\n');
+      for (var ri = 0; ri < rlines.length; ri++) {
+        var rl = rlines[ri];
+        if (rl.substring(0,4) !== 'ATOM' || rl.substring(17,20).trim() === 'HOH') continue;
+        var re = rl.substring(76,78).trim() || rl.substring(13,14).trim();
+        if (re !== 'N' && re !== 'O') continue;
+        var rx = parseFloat(rl.substring(30,38));
+        if (isNaN(rx)) continue;
+        var resname = rl.substring(17,20).trim();
+        var resnum = rl.substring(22,26).trim();
+        recAtoms.push({x:rx, y:parseFloat(rl.substring(38,46)), z:parseFloat(rl.substring(46,54)), res:resname+resnum});
+      }
+      var llines = poseData.split('\n');
+      var isSDF2 = poseData.indexOf('V2000') >= 0;
+      for (var li = 0; li < llines.length; li++) {
+        var ll = llines[li];
+        if (isSDF2) {
+          if (ll.length < 34) continue;
+          var lx = parseFloat(ll.substring(0,10));
+          if (isNaN(lx)) continue;
+          var le = ll.substring(31,34).trim();
+          if (le !== 'N' && le !== 'O') continue;
+          ligAtoms.push({x:lx, y:parseFloat(ll.substring(10,20)), z:parseFloat(ll.substring(20,30))});
+        } else {
+          if (ll.substring(0,4) !== 'ATOM' && ll.substring(0,6) !== 'HETATM') continue;
+          var le2 = ll.substring(12,16).trim();
+          le2 = le2[0] || '';
+          if (le2 !== 'N' && le2 !== 'O') continue;
+          var lx2 = parseFloat(ll.substring(30,38));
+          if (isNaN(lx2)) continue;
+          ligAtoms.push({x:lx2, y:parseFloat(ll.substring(38,46)), z:parseFloat(ll.substring(46,54))});
+        }
+      }
+      // 标出5A内口袋残基stick（不画π-π线）
+      if (Object.keys(nearRes).length > 0) {
+        var nrKeys = Object.keys(nearRes);
+        dockViewer.setStyle({model:0, resn:nrKeys}, {stick:{radius:0.25, color:'#D5D5DA'}, cartoon:{color:'#A0C8E0'}});
+      }
+
+      // 配体质心
+      var lcx = 0, lcy = 0, lcz = 0;
+      for (var li3 = 0; li3 < ligAtoms.length; li3++) { lcx += ligAtoms[li3].x; lcy += ligAtoms[li3].y; lcz += ligAtoms[li3].z; }
+      lcx /= ligAtoms.length; lcy /= ligAtoms.length; lcz /= ligAtoms.length;
+
+      // 全局收集所有配体-受体N/O对，按距离排序取最近
+      var hb = 0;
+      var allPairs = [];
+      for (var qi = 0; qi < ligAtoms.length; qi++) {
+        for (var pi = 0; pi < recAtoms.length; pi++) {
+          var dx = recAtoms[pi].x - ligAtoms[qi].x;
+          var dy = recAtoms[pi].y - ligAtoms[qi].y;
+          var dz = recAtoms[pi].z - ligAtoms[qi].z;
+          var d = Math.sqrt(dx*dx+dy*dy+dz*dz);
+          var dcx = recAtoms[pi].x - lcx, dcy = recAtoms[pi].y - lcy, dcz = recAtoms[pi].z - lcz;
+          if (d >= 2.5 && d <= 3.0 && dcx*dcx+dcy*dcy+dcz*dcz <= 25) {
+            allPairs.push({d:d, la:ligAtoms[qi], ra:recAtoms[pi]});
+          }
+        }
+      }
+      allPairs.sort(function(a,b){ return a.d - b.d; });
+      var shownRes = {};
+      for (var si = 0; si < allPairs.length && hb < 3; si++) {
+        var p = allPairs[si];
+        if (shownRes[p.ra.res]) continue;
+        shownRes[p.ra.res] = true;
+        dockViewer.addCylinder({
+          start: p.la, end: p.ra,
+          radius: 0.1, color: '#F5C842',
+          dashed: true, fromCap: 0, toCap: 0
+        });
+        dockViewer.addLabel(p.ra.res, {position:p.ra, fontColor:'#B8960C', fontSize:12, showBackground:false, alignment:'centerLeft'});
+        hb++;
+      }
+    }
+    
+    dockViewer.zoomTo();
+    dockViewer.render();
+  } catch(e) {
+    console.error('[DOCK-VIEWER] render error:', e);
+    el.innerHTML = '<div style="text-align:center;padding:60px;color:#F56C6C">3D 渲染失败<br><small>'+e.message+'</small></div>';
+  }
+}
+
+const app = createApp({
+  template: document.getElementById('app').innerHTML,
+  setup() {
+    const mode = ref('herb');
+    const subMode = ref('tcm');
+    const searchText = ref('');
+    const smilesText = ref('');
+    const selectedHerbs = ref([]);
+    const herbList = ref([]);
+    const formulas = ref([]);
+    const searchResults = ref([]);
+    const showSearchResults = ref(false);
+    const loading = ref(false);
+    const molLoading = ref(false);
+    const moleculeResult = ref(null);
+    const resultData = ref(null);
+    const showResult = ref(false);
+    const analyzeError = ref('');
+    const filterText = ref('');
+    const dt = ref(null);
+    const showDockDialog = ref(false);
+    const dockingTarget = ref(null);
+    const dockingIngredient = ref('');
+    const dockingResult = ref(null);
+    const dockingLoading = ref(false);
+
+    const dockError = ref('');
+
+    function downloadDockImage() {
+      if (!dockViewer) return;
+      var uri = dockViewer.pngURI();
+      var a = document.createElement('a');
+      a.href = uri;
+      a.download = (dockingTarget.value?.gene_name||'dock') + '_' + (dockingTarget.value?.uniprot_id||'') + '.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    const novelTargets = computed(() => (resultData.value?.targets||[]).filter(t => t.novelty_score >= 0.6));
+    const stats = computed(() => {
+      var ts = resultData.value?.targets || [];
+      return {pocketCount: ts.filter(t => t.has_pocket).length, bindingCount: ts.filter(t => t.binding !== null && t.binding <= -6).length};
+    });
+    const displayTargets = computed(() => {
+      if (!resultData.value?.targets) return [];
+      if (!filterText.value) return resultData.value.targets;
+      var q = filterText.value.toLowerCase();
+      return resultData.value.targets.filter(t => t.gene_name.toLowerCase().includes(q));
+    });
+
+    const ingredientView = computed(() => {
+      var targets = resultData.value?.targets || [];
+      var smap = resultData.value?.ingredient_smiles || {};
+      var map = {};
+      targets.forEach(function(t){
+        (t.ingredients||[]).forEach(function(ing){
+          var name = ing.replace(' ✓','').replace(' ✗','');
+          if (!map[name]) map[name] = {name:name, smiles:smap[name]||'C1=CC=CC=C1', targets:[], genes:new Set()};
+          if (!map[name].genes.has(t.gene_name)) {
+            map[name].genes.add(t.gene_name);
+            map[name].targets.push({gene:t.gene_name, uniprot:t.uniprot_id, binding:t.binding||null});
+          }
+        });
+      });
+      // 网络药理学标准：只保留核心成分（Degree ≥ 3），按靶点数降序
+      return Object.values(map)
+        .filter(function(c){ return c.targets.length >= 3; })
+        .sort(function(a,b){ return b.targets.length - a.targets.length; });
+    });
+
+    function modeBtn(m) { return {padding:'8px 24px',border:'2px solid #409EFF',borderRadius:'20px',cursor:'pointer',fontSize:'15px',fontWeight:'bold',background:mode.value===m?'linear-gradient(135deg,#409EFF,#337ecc)':'#fff',color:mode.value===m?'#fff':'#409EFF'}; }
+    function subBtn(m) { return {padding:'6px 16px',border:'1px solid #dcdfe6',borderRadius:'16px',cursor:'pointer',fontSize:'13px',background:subMode.value===m?'#409EFF':'#fff',color:subMode.value===m?'#fff':'#606266'}; }
+    function switchMode(m) { mode.value = m; }
+
+    async function loadHerbs() {
+      try { var r = await axios.get('/api/v1/herbs'); herbList.value = r.data.map(h => ({id:h.id,name:h.name,active:h.active})); } catch(e){ console.error('加载中药列表失败:', e); }
+    }
+    async function loadFormulas() {
+      try { var r = await axios.get('/api/v1/formulas'); formulas.value = r.data; } catch(e){ console.error('加载复方失败:', e); }
+    }
+    onMounted(function(){
+      // 健康检查 — 后端状态指示
+      axios.get('/api/v1/health').then(function(){
+        var el = document.getElementById('server-status');
+        if(el) el.style.display = 'none';
+      }).catch(function(){
+        // 后端未连接，保留红色提示
+      });
+      loadHerbs(); loadFormulas();
+    });
+
+    async function searchHerb() {
+      var q = searchText.value.trim();
+      if (!q||q.length<1) { searchResults.value=[]; return; }
+      try { var r=await axios.get('/api/v1/herbs/search',{params:{q:q}}); searchResults.value=r.data.map(h=>({name:h.chinese_name,active:h.active_ingredient_count})); } catch(e){ console.error('搜索失败:', e); searchResults.value=[]; }
+    }
+    function addSearchText() { var t=searchText.value.trim(); if(t&&!selectedHerbs.value.includes(t))selectedHerbs.value.push(t); searchText.value=''; showSearchResults.value=false; }
+    function selectSearchedHerb(name) { if(!selectedHerbs.value.includes(name))selectedHerbs.value.push(name); showSearchResults.value=false; searchText.value=''; }
+    function toggleHerb(name) { var i=selectedHerbs.value.indexOf(name); if(i>=0)selectedHerbs.value.splice(i,1); else selectedHerbs.value.push(name); }
+    function selectFormula(f) { selectedHerbs.value=[...f.herbs]; }
+    async function runAnalysis() {
+      if(searchText.value.trim()&&!selectedHerbs.value.includes(searchText.value.trim()))selectedHerbs.value.push(searchText.value.trim());
+      var names=selectedHerbs.value; if(!names.length)return;
+      loading.value=true; showResult.value=false; analyzeError.value='';
+      try { var r=await axios.post('/api/v1/analyze',{input_names:names}, {timeout: 600000}); resultData.value=r.data; showResult.value=true; loading.value=false; }catch(e){ loading.value=false; analyzeError.value='分析失败: '+(e.response?.data?.message||e.response?.data?.error||e.message||'未知错误'); }
+    }
+    function resetAnalysis() { showResult.value=false; resultData.value=null; selectedHerbs.value=[]; searchText.value=''; }
+    async function predictMolecule() {
+      var s=smilesText.value.trim(); if(!s)return;
+      molLoading.value=true;
+      try { var r=await axios.post('/api/v1/predict_molecule',{smiles:s}); moleculeResult.value=r.data; molLoading.value=false; }catch(e){ molLoading.value=false; console.error('预测失败:', e); }
+    }
+    function resetMolecule() { smilesText.value=''; moleculeResult.value=null; }
+
+    async function runDock(target) {
+      dockingTarget.value = target;
+      dockingIngredient.value = target.top_ingredient || '';
+      dockingResult.value = null;
+      dockingLoading.value = true;
+      showDockDialog.value = true;
+      // 后端自动处理 PDB/AlphaFold 下载，前端只需要传 SMILES + UniProt
+      try {
+        var payload = {
+          smiles: target.top_smiles || smilesText.value.trim() || 'C1=CC=CC=C1',
+          uniprot: target.uniprot_id
+        };
+        var resp = await axios.post('/api/v1/dock', payload, {timeout: 300000});
+        dockingResult.value = resp.data;
+        dockingLoading.value = false;
+        // 回写真实结合能到靶点表格
+        var aff = resp.data.affinity;
+        if (aff != null && resultData.value && resultData.value.targets) {
+          var tgts = resultData.value.targets;
+          for (var i = 0; i < tgts.length; i++) {
+            if (tgts[i].uniprot_id === target.uniprot_id || tgts[i].uniprot_id === target.uniprot) {
+              tgts[i].binding = aff; tgts[i].confidence = resp.data.confidence; tgts[i].pose_dist = resp.data.pose_dist; tgts[i]._docked = true; break;
+            }
+          }
+        }
+        if (aff != null && moleculeResult.value && moleculeResult.value.targets) {
+          var mtgts = moleculeResult.value.targets;
+          for (var j = 0; j < mtgts.length; j++) {
+            if (mtgts[j].uniprot_id === target.uniprot_id || mtgts[j].uniprot_id === target.uniprot) {
+              mtgts[j].dockedAffinity = aff; mtgts[j]._docked = true; break;
+            }
+          }
+        }
+        resp.data.ligand_smiles = resp.data.ligand_smiles || payload.smiles;
+        setTimeout(function() { renderDockViewer(resp.data); }, 500);
+      } catch(e) {
+        dockingLoading.value = false;
+        var errMsg = '对接请求失败';
+        if (e.code === 'ECONNABORTED' || (e.message && e.message.indexOf('timeout')>=0)) {
+          errMsg = '该分子较大/复杂，Vina 对接超时未完成。建议：①选择同味中药中分子量较小的活性成分对接；②当前显示的结合能为 Fpocket 估算值（Le Guilloux et al., 2009），可供参考。';
+        } else if (e.response && e.response.data && e.response.data.message) {
+          errMsg = e.response.data.message;
+        } else if (e.response && e.response.data && e.response.data.error_detail) {
+          errMsg = e.response.data.error_detail;
+        } else if (e.message) {
+          errMsg = e.message;
+        }
+        dockingResult.value = { status: 'error', message: errMsg };
+        dockError.value = errMsg;
+      }
+    }
+
+    return {mode,subMode,switchMode,selectedHerbs,resultData,showResult,analyzeError,searchText,smilesText,herbList,formulas,searchResults,showSearchResults,loading,molLoading,moleculeResult,novelTargets,stats,displayTargets,ingredientView,dt,showDockDialog,dockingTarget,dockingIngredient,dockingResult,dockingLoading,filterText,modeBtn,subBtn,searchHerb,addSearchText,selectSearchedHerb,toggleHerb,selectFormula,runAnalysis,resetAnalysis,predictMolecule,resetMolecule,runDock,dockError,downloadDockImage};
+  }
+});
+
+app.use(ElementPlus);
+for (const [k,c] of Object.entries(ElementPlusIconsVue)) app.component(k,c);
+app.mount('#app');
+</script>
+</body>
+</html>
