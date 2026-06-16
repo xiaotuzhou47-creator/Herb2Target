@@ -2099,7 +2099,10 @@ def pipeline(input_names):
         del t["_rows"]  # Row 对象不可 JSON 序列化
     return {"target_count": len(targets), "novel_target_count": nc, "targets": targets, "ingredient_smiles": ing_smiles}
 
-from uniprot_pdb import UNIPROT_PDB
+try:
+    from uniprot_pdb import UNIPROT_PDB
+except ImportError:
+    UNIPROT_PDB = {}
 
 
 @app.route("/api/v1/docking_info/<uniprot>")
